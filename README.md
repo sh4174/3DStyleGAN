@@ -14,7 +14,7 @@ The requirements of the original code +
 python dataset_tool.py create_from_images3d [TFRecord_Folder/TFRecord_Name] [NIFTI Data Folder] --shuffle 1 --base_size 5 6 7
 ```
 
-base_size: The size of the base layer of a generator. e.g. [ 4, 4, 4] for 2^x images. [5,6,7] for 160x192x224 (5x32, 6x32, 7x32) or 80x96x112 (5x16, 6x16, 7x16) images (shown in the paper). 
+base_size: The size of the base layer of a generator. e.g. [ 4, 4, 4] for 2^x images; [5,6,7] for 160x192x224 (5x32, 6x32, 7x32) or 80x96x112 (5x16, 6x16, 7x16) images (shown in the paper). 
 
 ## Train 3D-StyleGAN
 
