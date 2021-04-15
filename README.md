@@ -8,11 +8,13 @@ Please see the official repo (https://github.com/NVlabs/stylegan2) of StyleGAN2 
 The requirements of the original code + 
 (TF 1.14 --> TF 2.4.0), Python 3.8, nibabel
 
-## Create TFRecord with 3D Medical Images (NIFTI)
+## Create TFRecord with 3D Medical Images (NIFTI or NPZ)
 
 ```.bash
-python dataset_tool.py create_from_images3d [TFRecord_Folder/TFRecord_Name] [NIFTI Data Folder] --shuffle 1
+python dataset_tool.py create_from_images3d [TFRecord_Folder/TFRecord_Name] [NIFTI Data Folder] --shuffle 1 --base_size 5 6 7
 ```
+
+base_size: The size of the base layer of a generator. e.g. [ 4, 4, 4] for 2^x images. [5,6,7] for 160x192x224 (5x32, 6x32, 7x32) or 80x96x112 (5x16, 6x16, 7x16) images (shown in the paper). 
 
 ## Train 3D-StyleGAN
 
@@ -21,6 +23,8 @@ python run_training.py --num-gpus=4 --data-dir=[TF_Record_Folder] --config=[Trai
 ```
 
 [Training_Config] needs to be filled by the name of prefixed configuration in run_training.py
+
+The hyperparameters can be changed in run_training.py with a configuration name.
 
 ## Image Generation
 
@@ -37,7 +41,6 @@ python run_generator.py generate-images --network=[Trained_Network_Path] --seeds
 ```.bash
 python run_generator.py style-mixing-example --network=../trained_networks/2mm_f96.pkl --row-seeds=3181 --col-seeds=1104,1120 --truncation-psi=0.0 --col-styles=6-9
 ```
-
 
 Please contact Sungmin Hong (HMS/MGH, shong20@mgh.harvard.edu) and Razvan Marinescu (MIT, razvan@csail.mit.edu) if you have any questions. 
 
