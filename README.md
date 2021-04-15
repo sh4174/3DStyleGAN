@@ -8,6 +8,8 @@ Please see the official repo (https://github.com/NVlabs/stylegan2) of StyleGAN2 
 The requirements of the original code + 
 (TF 1.14 --> TF 2.4.0), Python 3.8, nibabel
 
+Conda environment file is included in the conda_en directory.
+
 ## Create TFRecord with 3D Medical Images (NIFTI or NPZ)
 
 ```.bash
