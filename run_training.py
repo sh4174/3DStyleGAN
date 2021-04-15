@@ -16,6 +16,7 @@ _valid_configs = [
     'Gorig-Dorig-r1-3d-1mm-base567',
     'Gorig-Dres-3d-2mm-base567',
     'Gorig-Dres-R1-3d-2mm-base567',
+    'Gorig-Dres-DeepFil-R1-3d-2mm-base567',
     'Gorig-Dres-R2-3d-2mm-base567',
 ]
 
@@ -53,15 +54,15 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
 
         # Synthesis Network Params
         # G.resolution = 128
-        G.fmap_min = 24
-        G.fmap_max = 24
+        G.fmap_min = 18
+        G.fmap_max = 18
         G.base_size = [ 5, 6, 7 ]
 
         # Discriminator Params 
         D.architecture = 'resnet'        
         # D.resolution=128
-        D.fmap_min = 24
-        D.fmap_max = 24
+        D.fmap_min = 18
+        D.fmap_max = 18
         D.base_size = [ 5, 6, 7 ]
 
         train.data_dir = data_dir
@@ -73,7 +74,7 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
         sched.G_lrate_base = sched.D_lrate_base = 0.002
 
         sched.minibatch_gpu_base = 2
-        sched.minibatch_gpu_dict = {8: 8, 16: 4, 32: 4, 64: 2, 128:2}
+        sched.minibatch_gpu_dict = {8: 8, 16: 8, 32: 2, 64: 2, 128:2}
         # sched.minibatch_gpu_dict = {8: 8, 16: 8, 32: 4, 64: 4}
 
         sched.minibatch_size_base = sched.minibatch_gpu_base * num_gpus
@@ -98,15 +99,15 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
 
         # Synthesis Network Params
         # G.resolution = 128
-        G.fmap_min = 24
-        G.fmap_max = 24
+        G.fmap_min = 16
+        G.fmap_max = 16
         G.base_size = [ 5, 6, 7 ]
 
         # Discriminator Params 
         D.architecture = 'orig'        
         # D.resolution=128
-        D.fmap_min = 24
-        D.fmap_max = 24
+        D.fmap_min = 16
+        D.fmap_max = 16
         D.base_size = [ 5, 6, 7 ]
 
         train.data_dir = data_dir
@@ -343,6 +344,51 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
 
         sched.minibatch_gpu_base = 16
         sched.minibatch_gpu_dict = {8: 16, 16: 8, 32: 4, 64: 4}
+
+        sched.minibatch_size_base = sched.minibatch_gpu_base * num_gpus
+        sched.minibatch_size_dict = {8: sched.minibatch_gpu_dict[ 8 ] * num_gpus , 16:  sched.minibatch_gpu_dict[ 16 ] * num_gpus, 32:  sched.minibatch_gpu_dict[ 32 ] * num_gpus, 64:  sched.minibatch_gpu_dict[ 64 ] * num_gpus}
+    elif config_id == 'Gorig-Dres-DeepFil-R1-3d-2mm-base567':
+        train   = EasyDict(run_func_name='training.training_loop_3d.training_loop') # Options for training loop.
+
+        G       = EasyDict(func_name='training.networks3d_stylegan2.G_main')
+        D       = EasyDict(func_name='training.networks3d_stylegan2.D_stylegan2_3d_curated_real')
+
+        G_loss  = EasyDict(func_name='training.loss.G_logistic_ns_pathreg')
+        D_loss  = EasyDict(func_name='training.loss.D_logistic_r1')
+
+        # Generator Params 
+        G.architecture = 'orig'
+        
+        # Mapping Network Params
+        G.latent_size = 128
+        G.dlatent_size = 128
+        G.mapping_fmaps = 128
+
+        # Synthesis Network Params
+        # G.resolution = 128
+        G.fmap_min = 128
+        G.fmap_max = 128
+        G.base_size = [ 5, 6, 7 ]
+
+        # Discriminator Params 
+        D.architecture = 'resnet'        
+        # D.resolution=128
+        D.fmap_min = 128
+        D.fmap_max = 128
+        D.base_size = [ 5, 6, 7 ]
+        
+
+        train.data_dir = data_dir
+        train.total_kimg = total_kimg
+        train.mirror_augment = mirror_augment
+        train.image_snapshot_ticks = 1
+        train.network_snapshot_ticks = 1
+        train.lazy_regularization = False 
+        
+        sched.G_lrate_base = sched.D_lrate_base = 0.002
+
+        sched.minibatch_gpu_base = 8
+        sched.minibatch_gpu_dict = {8: 8, 16: 8, 32: 4, 64: 2}
 
         sched.minibatch_size_base = sched.minibatch_gpu_base * num_gpus
         sched.minibatch_size_dict = {8: sched.minibatch_gpu_dict[ 8 ] * num_gpus , 16:  sched.minibatch_gpu_dict[ 16 ] * num_gpus, 32:  sched.minibatch_gpu_dict[ 32 ] * num_gpus, 64:  sched.minibatch_gpu_dict[ 64 ] * num_gpus}
