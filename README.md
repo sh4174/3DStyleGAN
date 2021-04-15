@@ -1,6 +1,6 @@
 ## 3D-StyleGAN for medical images
 
-3D-StyleGAN is for the generative modeling of full 3D medical images.
+3DStyleGAN for the generative modeling of full 3D medical images.
 
 Please see the official repo (https://github.com/NVlabs/stylegan2) of StyleGAN2 from NVIDIA for the original code and its license. 
 
