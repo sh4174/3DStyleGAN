@@ -211,6 +211,48 @@ class TFRecordExporter:
 
         self.cur_images += 1
 
+    def add_image3d_base(self, img, base_size):
+        if self.print_progress and self.cur_images % self.progress_interval == 0:
+            print('%d / %d\r' % (self.cur_images, self.expected_images), end='', flush=True)
+        if self.shape is None:
+            self.shape = img.shape
+
+            assert self.shape[ 0 ] == 1, "Image Channel is not 1"
+            # assert self.shape[ 1 ] == 160 and self.shape[ 2 ] == 192 and self.shape[ 3 ] == 224, "Error: Image dimension is fixed to 160x192x224"
+
+            self.resolution_log2 = int(np.log2( self.shape[1] / base_size[ 0 ] * 4 ) )
+            # assert self.shape[0] == 1, "Image Channel is not 1"
+            # assert self.shape[1] == self.shape[2], "Image Dimension Mismatch"
+            # assert self.shape[2] == self.shape[3], "Image Dimension Mismatch"
+            # assert self.shape[1] == 2**self.resolution_log2, "Image Dimension must be the order of 2"
+
+            tfr_opt = tf.io.TFRecordOptions(tf.compat.v1.io.TFRecordCompressionType.NONE)
+            for lod in range(self.resolution_log2 - 1):
+                tfr_file = self.tfr_prefix + '-r%02d.tfrecords' % (self.resolution_log2 - lod)
+                self.tfr_writers.append(tf.io.TFRecordWriter(tfr_file, tfr_opt))
+        assert img.shape == self.shape
+
+        for lod, tfr_writer in enumerate(self.tfr_writers):
+            if lod:
+                img = img.astype(np.float32)
+                img = (img[:, 0::2, 0::2, 0::2] + img[:, 0::2, 0::2, 1::2] + img[:, 0::2, 1::2, 0::2] + img[:, 0::2, 1::2, 1::2] + img[:, 1::2, 0::2, 0::2] + img[:, 1::2, 0::2, 1::2] + img[:, 1::2, 1::2, 0::2] + img[:, 1::2, 1::2, 1::2] ) * 0.125
+
+            print( "===================================================================" )
+            print( "lod" )
+            print( lod )
+            print( "img.shape" )
+            print( img.shape )
+            print( "===================================================================" )
+            
+            quant = img.clip(0, 1.0).astype(np.float32)
+
+            ex = tf.train.Example(features=tf.train.Features(feature={
+                'shape': tf.train.Feature(int64_list=tf.train.Int64List(value=quant.shape)),
+                'data': tf.train.Feature(bytes_list=tf.train.BytesList(value=[quant.tobytes()]))}))
+            tfr_writer.write(ex.SerializeToString())
+
+        self.cur_images += 1
+
 
     def add_labels(self, labels):
         if self.print_progress:
@@ -549,12 +591,17 @@ def compare(tfrecord_dir_a, tfrecord_dir_b, ignore_labels):
 
 #---------------------------------------------------------------------------------------
 
-def create_from_images3d(tfrecord_dir, image_dir, shuffle):
+def create_from_images3d(tfrecord_dir, image_dir, shuffle, base_size):
     print('Loading images from "%s"' % image_dir)
     image_filenames = sorted(glob.glob(os.path.join(image_dir, '*')))
     if len(image_filenames) == 0:
         error('No input images found')
 
+
+    print( "======================================" )
+    print( "base_size" )
+    print( base_size )
+    print( "======================================" )
     ref_filename = image_filenames[ 0 ] 
 
     data_ext = -1 # invalid extension
@@ -575,7 +622,8 @@ def create_from_images3d(tfrecord_dir, image_dir, shuffle):
         img = np.load( image_filenames[ 0 ] )
         img = img[ 'vol_data' ]
 
-    resolution = np.max( img.shape ) / 7 * 4
+    resolution = img.shape[ 0 ] / base_size[ 0 ] * 4
+
     channels = img.shape[3] if img.ndim == 4 else 1
 
     print( img.shape )
@@ -604,12 +652,14 @@ def create_from_images3d(tfrecord_dir, image_dir, shuffle):
             else:
                 img = img.transpose([3, 0, 1, 2]) # XYZC => CXYZ
 
-            if img.shape[ 1 ] == 192: # Synthetic 192x192x128
-            	tfr.add_image3d_192( img )
-            if img.shape[ 1 ] == 160: # Curated real images 160x192x224
-                tfr.add_image3d_curated_real( img )
-            else:
-            	tfr.add_image3d(img)
+            tfr.add_image3d_base(img, base_size)
+
+            # if img.shape[ 1 ] == 192: # Synthetic 192x192x128
+            # 	tfr.add_image3d_192( img )
+            # if img.shape[ 1 ] == 160: # Curated real images 160x192x224
+            #     tfr.add_image3d_curated_real( img )
+            # else:
+            # 	tfr.add_image3d_base(img, base_size)
 
 #----------------------------------------------------------------------------
 
@@ -888,6 +938,7 @@ def execute_cmdline(argv):
     p.add_argument(     'tfrecord_dir',     help='New dataset directory to be created')
     p.add_argument(     'image_dir',        help='Directory containing the images')
     p.add_argument(     '--shuffle',        help='Randomize image order (default: 1)', type=int, default=1)
+    p.add_argument(     '--base_size',      help='Base Layer Size (e.g. 4 4 4 for 2^x sized images. 5 6 7 for 160x192x224 (5x32, 6x32, 7x32) or 80x96x112 (5x16, 6x16, 7x16) images ). (default: 5 6 7 for 160x192x224 images', nargs=3, type=int, default=[5, 6, 7] )
 
     p = add_command(    'create_from_hdf5', 'Create dataset from legacy HDF5 archive.',
                                             'create_from_hdf5 datasets/celebahq ~/downloads/celeba-hq-1024x1024.h5')
