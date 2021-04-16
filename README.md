@@ -1,4 +1,4 @@
-## 3D StyleGAN for three dimensional medical images
+## 3D StyleGAN for Three Dimensional Medical Images
 
 3D StyleGAN for the generative modeling of full 3D medical images.
 
