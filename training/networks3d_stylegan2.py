@@ -140,13 +140,13 @@ def minibatch_stddev_layer(x, group_size=4, num_new_features=1):
     group_size = tf.minimum(group_size, tf.shape(x)[0])     # Minibatch must be divisible by (or smaller than) group_size.
     s = x.shape                                             # [NCDHW]  Input shape.
     y = tf.reshape(x, [group_size, -1, num_new_features, s[1]//num_new_features, s[2], s[3], s[4]])   # [GMNCDHW] Split minibatch into M groups of size G. Split channels into n channel groups c.
-    # y = tf.cast(y, tf.float32)                              # [GMNCDHW] Cast to FP32.
+    y = tf.cast(y, tf.float32)                              # [GMNCDHW] Cast to FP32.
     y -= tf.reduce_mean(y, axis=0, keepdims=True)           # [GMNCDHW] Subtract mean over group.
     y = tf.reduce_mean(tf.square(y), axis=0)                # [MNCDHW]  Calc variance over group.
     y = tf.sqrt(y + 1e-8)                                   # [MNCDHW]  Calc stddev over group.
     y = tf.reduce_mean(y, axis=[2,3,4,5], keepdims=True)      # [Mn1111]  Take average over fmaps and pixels.
     y = tf.reduce_mean(y, axis=[2])                         # [Mn11] Split channels into c channel groups
-    # y = tf.cast(y, x.dtype)                                 # [Mn11]  Cast back to original data type.
+    y = tf.cast(y, x.dtype)                                 # [Mn11]  Cast back to original data type.
     y = tf.tile(y, [group_size, 1, s[2], s[3], s[4]])             # [NnHWD]  Replicate over group and pixels.
     return tf.concat([x, y], axis=1)                        # [NCDHW]  Append as new fmap.
 
@@ -204,7 +204,7 @@ def G_main(
 
     # Evaluate mapping network.
     dlatents = components.mapping.get_output_for(latents_in, labels_in, is_training=is_training, **kwargs)
-    # dlatents = tf.cast(dlatents, tf.float32)
+    dlatents = tf.cast(dlatents, tf.float32)
 
     # Update moving average of W.
     if dlatent_avg_beta is not None:
@@ -220,7 +220,7 @@ def G_main(
         with tf.variable_scope('StyleMix'):
             latents2 = tf.random_normal(tf.shape(latents_in))
             dlatents2 = components.mapping.get_output_for(latents2, labels_in, is_training=is_training, **kwargs)
-            # dlatents2 = tf.cast(dlatents2, tf.float32)
+            dlatents2 = tf.cast(dlatents2, tf.float32)
             layer_idx = np.arange(num_layers)[np.newaxis, :, np.newaxis]
             cur_layers = num_layers - tf.cast(lod_in, tf.int32) * 2
             mixing_cutoff = tf.cond(
@@ -233,8 +233,8 @@ def G_main(
     if truncation_psi is not None:
         with tf.variable_scope('Truncation'):
             layer_idx = np.arange(num_layers)[np.newaxis, :, np.newaxis]
-            # layer_psi = np.ones(layer_idx.shape, dtype=np.float32)
-            layer_psi = np.ones(layer_idx.shape, dtype=np.float16)
+            layer_psi = np.ones(layer_idx.shape, dtype=np.float32)
+            # layer_psi = np.ones(layer_idx.shape, dtype=np.float16)
             if truncation_cutoff is None:
                 layer_psi *= truncation_psi
             else:

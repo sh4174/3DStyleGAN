@@ -262,16 +262,16 @@ def training_loop(
                     D_loss += tf.cast( D_reg, tf.float16 )
             else:
                 if G_reg is not None: 
-                    G_reg_opt.register_gradients( tf.reduce_mean( G_reg * G_reg_interval ), G_gpu.trainables)
-                    # G_reg_opt.register_gradients( tf.cast( tf.reduce_mean( tf.cast( G_reg * G_reg_interval, tf.float64 ), tf.float16 ) ), G_gpu.trainables)
+                    # G_reg_opt.register_gradients( tf.reduce_mean( G_reg * G_reg_interval ), G_gpu.trainables)
+                    G_reg_opt.register_gradients( tf.cast( tf.reduce_mean( tf.cast( G_reg * G_reg_interval, tf.float64 ), dtypeGlob ) ), G_gpu.trainables)
                 if D_reg is not None: 
-                    D_reg_opt.register_gradients( tf.reduce_mean( D_reg * D_reg_interval ), D_gpu.trainables)
-                    # D_reg_opt.register_gradients( tf.cast( tf.reduce_mean( tf.cast( D_reg * D_reg_interval, tf.float64 ), tf.float16 ) ), D_gpu.trainables)
+                    # D_reg_opt.register_gradients( tf.reduce_mean( D_reg * D_reg_interval ), D_gpu.trainables)
+                    D_reg_opt.register_gradients( tf.cast( tf.reduce_mean( tf.cast( D_reg * D_reg_interval, tf.float64 ), dtypeGlob ) ), D_gpu.trainables)
                         
-            G_opt.register_gradients( tf.reduce_mean( G_loss ), G_gpu.trainables)
-            D_opt.register_gradients( tf.reduce_mean( D_loss ), D_gpu.trainables)
-            # G_opt.register_gradients( tf.cast( tf.reduce_mean( tf.cast( G_loss, tf.float64 ) ), tf.float16 ), G_gpu.trainables)
-            # D_opt.register_gradients( tf.cast( tf.reduce_mean( tf.cast( D_loss, tf.float64 ) ), tf.float16 ), D_gpu.trainables)
+            # G_opt.register_gradients( tf.reduce_mean( G_loss ), G_gpu.trainables)
+            # D_opt.register_gradients( tf.reduce_mean( D_loss ), D_gpu.trainables)
+            G_opt.register_gradients( tf.cast( tf.reduce_mean( tf.cast( G_loss, tf.float64 ) ), dtypeGlob ), G_gpu.trainables)
+            D_opt.register_gradients( tf.cast( tf.reduce_mean( tf.cast( D_loss, tf.float64 ) ), dtypeGlob ), D_gpu.trainables)
 
     # Setup training ops.
     data_fetch_op = tf.group(*data_fetch_ops)
@@ -305,7 +305,6 @@ def training_loop(
     tick_start_nimg = cur_nimg
     prev_lod = -1.0
     running_mb_counter = 0
-
 
     print( "==========================================" )
     print( "Lazy Regularization" )

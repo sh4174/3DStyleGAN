@@ -65,20 +65,22 @@ def ncc(I, J, eps=1e-5):
     # return cc
 
 def mse(I, J, image_sigma=1.0):
-    return 1.0 / (image_sigma**2) * tf.reduce_mean((I - J)*(I-J))
+    return (1.0 / (image_sigma**2)) * tf.reduce_mean((I - J)*(I-J))
 
 #----------------------------------------------------------------------------
+
+downsample = True
 
 class Projector:
     def __init__(self):
         self.num_steps                  = 1000
         self.dlatent_avg_samples        = 10000
-        self.initial_learning_rate      = 10.0
+        self.initial_learning_rate      = 0.3
         self.initial_noise_factor       = 0.05
         self.lr_rampdown_length         = 0.25
         self.lr_rampup_length           = 0.05
         self.noise_ramp_length          = 0.75
-        self.regularize_noise_weight    = 0 # 1e5
+        self.regularize_noise_weight    = 1e5
         self.verbose                    = False
         self.clone_net                  = True
 
@@ -119,10 +121,21 @@ class Projector:
         # Find dlatent stats.
         self._info('Finding W midpoint and stddev using %d samples...' % self.dlatent_avg_samples)
         latent_samples = np.random.RandomState(123).randn(self.dlatent_avg_samples, *self._Gs.input_shapes[0][1:])
-        dlatent_samples = self._Gs.components.mapping.run(latent_samples, None)[:, :1, :] # [N, 1, 512]
-        self._dlatent_avg = np.mean(dlatent_samples, axis=0, keepdims=True) # [1, 1, 512]
-        self._dlatent_std = (np.sum((dlatent_samples - self._dlatent_avg) ** 2) / self.dlatent_avg_samples) ** 0.5
+        self._dlatent_samples = self._Gs.components.mapping.run(latent_samples, None)[:, :1, :] # [N, 1, 512]
+        self._dlatent_avg = np.mean(self._dlatent_samples, axis=0, keepdims=True) # [1, 1, 512]
+        self._dlatent_std = (np.sum(((self._dlatent_samples - self._dlatent_avg) ** 2) / self.dlatent_avg_samples)) ** 0.5 # moved the divion before np.sum, as otherwise for float16 it goes over the max value aand we get std = infinity 
         self._info('std = %g' % self._dlatent_std)
+
+        #print(type(self._dlatent_avg), self._dlatent_avg.dtype)
+        #print((self._dlatent_samples - self._dlatent_avg))
+        #print((self._dlatent_samples - self._dlatent_avg) ** 2)
+        #print(np.max((self._dlatent_samples - self._dlatent_avg) ** 2))
+        #print(np.sum((self._dlatent_samples - self._dlatent_avg) ** 2))
+        #print((np.sum((self._dlatent_samples - self._dlatent_avg) ** 2) / self.dlatent_avg_samples))
+        #print('_dlatent_samples', self._dlatent_samples, self._dlatent_samples.shape)
+        #print('_dlatent_avg', self._dlatent_avg, self._dlatent_avg.shape)
+        #print('_dlatent_std', self._dlatent_std, self._dlatent_std.shape)
+        #asd
 
         # Find noise inputs.
         self._info('Setting up noise inputs...')
@@ -151,67 +164,32 @@ class Projector:
         self._dlatents_expr = tf.tile(self._dlatents_var + dlatents_noise, [1, self._Gs.components.synthesis.input_shape[1], 1])
         self._images_expr = self._Gs.components.synthesis.get_output_for(self._dlatents_expr, randomize_noise=False)
 
-        # Downsample image to 256x256 if it's larger than that. VGG was built for 224x224 images.
+        print(self._images_expr.shape) # (1, 1, 80, 96, 112)
+
+        # Also downsample images by factor of F (80,96,112) -> (80/F,96/F,112/F). F should be power of 2 
         proc_images_expr = tf.cast( (self._images_expr + 1) * (255 / 2), tf.float32 )
         sh = proc_images_expr.shape.as_list()
-        if sh[2] > 256:
-            factor = sh[2] // 256
-            proc_images_expr = tf.reduce_mean(tf.reshape(proc_images_expr, [-1, sh[1], sh[2] // factor, factor, sh[2] // factor, factor]), axis=[3,5])
+        
+        factor = 8
+        self.factor = factor
+        self._proc_images_expr_small = tf.reduce_mean(tf.reshape(proc_images_expr, [-1, sh[1], sh[2] // factor, factor, sh[3] // factor, factor, sh[4] // factor, factor]), axis=[3,5,7])
 
         # Loss graph.
         self._info('Building loss graph...')
         self._target_images_var = tf.Variable(tf.zeros(proc_images_expr.shape), name='target_images_var')
+        self._target_images_var_small = tf.Variable(tf.zeros(self._proc_images_expr_small.shape), name='target_images_var_small')
 
-        if self._lpips is None:
-            self._lpips = misc.load_pkl('https://nvlabs-fi-cdn.nvidia.com/stylegan/networks/metrics/vgg16_zhang_perceptual.pkl')
+        #if self._lpips is None:
+        #    self._lpips = misc.load_pkl('https://nvlabs-fi-cdn.nvidia.com/stylegan/networks/metrics/vgg16_zhang_perceptual.pkl')
 
-        # self._dist = self._lpips.get_output_for(proc_images_expr, self._target_images_var)
-        # self._loss = tf.reduce_sum(self._dist)
+        self._proc_images_expr = proc_images_expr # save it global variable
 
-
-        # proc_images_expr1 = proc_images_expr[ :, :, sh[2] // 2, :, : ]
-        # proc_images_expr2 = proc_images_expr[ :, :, :, sh[3] // 2, : ]
-        # proc_images_expr3 = proc_images_expr[ :, :, :, :, sh[4] // 2 ]
-
-        # print('before reshape: proc_img_var1', proc_images_expr1.shape)
-        # print('before reshape: proc_img_var2', proc_images_expr2.shape)
-        # print('before reshape: proc_img_var3', proc_images_expr3.shape)
-
-        # # if sh[2] == 256 and sh[3] == 256 and sh[4] == 256:
-        # #     factor2 = sh[2] // 256
-        # #     factor3 = sh[3] // 256
-        # #     factor4 = sh[4] // 256
-        # #     proc_images_expr = tf.reduce_mean(tf.reshape(proc_images_expr, [-1, sh[1], sh[2] // factor, factor, sh[2] // factor, factor]), axis=[3,5])
-    
-        # print('proc_img_var', proc_images_expr.shape)
-
-        # proc_target_images_var1 = self._target_images_var[ :, :, sh[2]//2, :, : ]
-        # proc_target_images_var2 = self._target_images_var[ :, :, :, sh[3]//2, : ]
-        # proc_target_images_var3 = self._target_images_var[ :, :, :, :, sh[4]//2 ]
-
-        # proc_images_expr1 = tf.repeat( proc_images_expr1, 3, axis=1 )
-        # proc_images_expr2 = tf.repeat( proc_images_expr2, 3, axis=1 )
-        # proc_images_expr3 = tf.repeat( proc_images_expr3, 3, axis=1 )
-
-
-        # proc_target_images_var1 = tf.repeat( proc_target_images_var1, 3, axis=1 )
-        # proc_target_images_var2 = tf.repeat( proc_target_images_var2, 3, axis=1 )
-        # proc_target_images_var3 = tf.repeat( proc_target_images_var3, 3, axis=1 )
-
-        # print('proc_target_images_var1 ', proc_target_images_var1.shape)
-        # print('proc_target_images_var2 ', proc_target_images_var2.shape)
-        # print('proc_target_images_var3 ', proc_target_images_var3.shape)
-
-        # dist_1 = self._lpips.get_output_for(proc_images_expr1, proc_target_images_var1)
-        # dist_2 = self._lpips.get_output_for(proc_images_expr2, proc_target_images_var2)
-        # dist_3 = self._lpips.get_output_for(proc_images_expr3, proc_target_images_var3)
-
-        # # self._dist = tf.add( tf.add( dist_1, dist_2 ), dist_3 ) / 3.0
-        # self._dist = ( dist_1 + dist_2 + dist_3 ) / 3.0
-        # self._loss = tf.reduce_sum(self._dist)
-
+        # compute two distances: one on full resolution, the other on downsampled 32x32 images
         self._dist = mse( proc_images_expr, self._target_images_var )
-        self._loss = tf.reduce_sum(self._dist)
+        self._loss_big = tf.reduce_sum(self._dist) 
+        self._dist_small = mse( self._proc_images_expr_small, self._target_images_var_small )
+        self._loss_small = tf.reduce_sum(self._dist_small) 
+        self._loss = self._loss_big + self._loss_small
 
         # Noise regularization graph.
         self._info('Building noise regularization graph...')
@@ -229,13 +207,14 @@ class Projector:
                 sz2 = sz2 // 2
                 sz3 = sz3 // 2
                 sz4 = sz4 // 2
-        self._loss += reg_loss * self.regularize_noise_weight
+        #self._loss += reg_loss * self.regularize_noise_weight
 
         # Optimizer.
         self._info('Setting up optimizer...')
         self._lrate_in = tf.placeholder(tf.float32, [], name='lrate_in')
         self._opt = dnnlib.tflib.Optimizer(learning_rate=self._lrate_in)
         self._opt.register_gradients(self._loss, [self._dlatents_var] + self._noise_vars)
+        #self._opt.register_gradients(self._loss, [self._dlatents_var])
         self._opt_step = self._opt.apply_updates()
 
     def run(self, target_images):
@@ -260,13 +239,18 @@ class Projector:
         target_images = (target_images + 1) * (255 / 2)
         sh = target_images.shape
         assert sh[0] == self._minibatch_size
-        if sh[2] > self._target_images_var.shape[2]:
-            factor = sh[2] // self._target_images_var.shape[2]
-            target_images = np.reshape(target_images, [-1, sh[1], sh[2] // factor, factor, sh[3] // factor, factor]).mean((3, 5))
+        factor = self.factor
+        target_images_small = np.reshape(target_images, [-1, sh[1], sh[2] // factor, factor, sh[3] // factor, factor, sh[4] // factor, factor]).mean((3, 5, 7))
+
+        print(target_images.shape)
+        print(np.reshape(target_images, [-1, sh[1], sh[2] // factor, factor, sh[3] // factor, factor, sh[4] // factor, factor]).shape)
+        print(target_images_small.shape)
+        print(self._target_images_var_small.shape)
+        
 
         # Initialize optimization state.
         self._info('Initializing optimization state...')
-        tflib.set_vars({self._target_images_var: target_images, self._dlatents_var: np.tile(self._dlatent_avg, [self._minibatch_size, 1, 1])})
+        tflib.set_vars({self._target_images_var: target_images, self._target_images_var_small : target_images_small, self._dlatents_var: np.tile(self._dlatent_avg, [self._minibatch_size, 1, 1])})
         tflib.run(self._noise_init_op)
         self._opt.reset_optimizer_state()
         self._cur_step = 0
@@ -288,13 +272,22 @@ class Projector:
 
         # Train.
         feed_dict = {self._noise_in: noise_strength, self._lrate_in: learning_rate}
-        _, dist_value, loss_value = tflib.run([self._opt_step, self._dist, self._loss], feed_dict)
+        _dlatents_expr, _images_expr, _, _dist, _loss, _loss_big, _loss_small, _proc_images_expr, _target_images_var = tflib.run([self._dlatents_expr, self._images_expr, self._opt_step, self._dist, self._loss, self._loss_big, self._loss_small, self._proc_images_expr, self._target_images_var], feed_dict)
+        #_dlatent_samples = tflib.run([self._dlatent_samples], feed_dict)
         tflib.run(self._noise_normalize_op)
 
         # Print status.
         self._cur_step += 1
         if self._cur_step == self.num_steps or self._cur_step % 10 == 0:
-            self._info('%-8d%-12g%-12g' % (self._cur_step, dist_value, loss_value))
+            #self._info('%-8d%-12g%-12g' % (self._cur_step, dist_value, loss_value))
+            print('%.2f, %.2f, %.2f, %.2f' % (_dist, _loss, _loss_big, _loss_small))
+            #print('dlatent_samples', _dlatent_samples, _dlatent_samples.shape)
+            #print('dlatents_avg', _dlatents_avg, _dlatents_avg.shape)
+            #print('dlatents_std', _dlatents_std, _dlatents_std.shape)
+            #print('dlatents_expr', _dlatents_expr)
+            #print('images_expr', _images_expr)
+            #print('proc_images_expr', _proc_images_expr)
+            #print('target_images_var', _target_images_var)
         if self._cur_step == self.num_steps:
             self._info('Done.')
 

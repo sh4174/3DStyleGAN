@@ -243,8 +243,7 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
         D.fmap_min = 96
         D.fmap_max = 96
         D.base_size = [ 5, 6, 7 ]
-         
-
+        
         train.data_dir = data_dir
         train.total_kimg = total_kimg
         train.mirror_augment = mirror_augment
@@ -277,15 +276,15 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
 
         # Synthesis Network Params
         # G.resolution = 128
-        G.fmap_min = 96
-        G.fmap_max = 96
+        G.fmap_min = 32
+        G.fmap_max = 32
         G.base_size = [ 5, 6, 7 ]
 
         # Discriminator Params 
         D.architecture = 'resnet'        
         # D.resolution=128
-        D.fmap_min = 96
-        D.fmap_max = 96
+        D.fmap_min = 32
+        D.fmap_max = 32
         D.base_size = [ 5, 6, 7 ]
         
 
@@ -298,8 +297,8 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
         
         sched.G_lrate_base = sched.D_lrate_base = 0.002
 
-        sched.minibatch_gpu_base = 16
-        sched.minibatch_gpu_dict = {8: 16, 16: 8, 32: 4, 64: 4}
+        sched.minibatch_gpu_base = 2
+        sched.minibatch_gpu_dict = {8: 16, 16: 8, 32: 4, 64: 2}
 
         sched.minibatch_size_base = sched.minibatch_gpu_base * num_gpus
         sched.minibatch_size_dict = {8: sched.minibatch_gpu_dict[ 8 ] * num_gpus , 16:  sched.minibatch_gpu_dict[ 16 ] * num_gpus, 32:  sched.minibatch_gpu_dict[ 32 ] * num_gpus, 64:  sched.minibatch_gpu_dict[ 64 ] * num_gpus}
@@ -322,15 +321,15 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
 
         # Synthesis Network Params
         # G.resolution = 128
-        G.fmap_min = 96
-        G.fmap_max = 96
+        G.fmap_min = 16
+        G.fmap_max = 16
         G.base_size = [ 5, 6, 7 ]
 
         # Discriminator Params 
         D.architecture = 'resnet'        
         # D.resolution=128
-        D.fmap_min = 96
-        D.fmap_max = 96
+        D.fmap_min = 16
+        D.fmap_max = 16
         D.base_size = [ 5, 6, 7 ]
     
         train.data_dir = data_dir
@@ -343,7 +342,7 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
         sched.G_lrate_base = sched.D_lrate_base = 0.002
 
         sched.minibatch_gpu_base = 16
-        sched.minibatch_gpu_dict = {8: 16, 16: 8, 32: 4, 64: 4}
+        sched.minibatch_gpu_dict = {8: 16, 16: 8, 32: 4, 64: 2}
 
         sched.minibatch_size_base = sched.minibatch_gpu_base * num_gpus
         sched.minibatch_size_dict = {8: sched.minibatch_gpu_dict[ 8 ] * num_gpus , 16:  sched.minibatch_gpu_dict[ 16 ] * num_gpus, 32:  sched.minibatch_gpu_dict[ 32 ] * num_gpus, 64:  sched.minibatch_gpu_dict[ 64 ] * num_gpus}
