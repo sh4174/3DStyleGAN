@@ -1,6 +1,6 @@
-## 3D-StyleGAN for medical images
+## 3D StyleGAN for three dimensional medical images
 
-3DStyleGAN for the generative modeling of full 3D medical images.
+3D StyleGAN for the generative modeling of full 3D medical images.
 
 Please see the official repo (https://github.com/NVlabs/stylegan2) of StyleGAN2 from NVIDIA for the original code and its license. 
 
@@ -18,7 +18,7 @@ python dataset_tool.py create_from_images3d [TFRecord_Folder/TFRecord_Name] [NIF
 
 base_size: The size of the base layer of a generator. e.g. [ 4, 4, 4] for 2^x images; [5,6,7] for 160x192x224 (5x32, 6x32, 7x32) or 80x96x112 (5x16, 6x16, 7x16) images (shown in the paper). 
 
-## Train 3D-StyleGAN
+## Train 3D StyleGAN
 
 ```.bash
 python run_training.py --num-gpus=4 --data-dir=[TF_Record_Folder] --config=[Training_Config] --dataset=[TFRecord_Name] --total-kimg=6000
