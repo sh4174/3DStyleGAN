@@ -44,6 +44,10 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
         G_loss  = EasyDict(func_name='training.loss.G_logistic_ns_pathreg')
         D_loss  = EasyDict(func_name='training.loss.D_logistic_r1')
 
+
+        dataset_args = EasyDict(tfrecord_dir=dataset)
+        dataset_args.base_size = [ 5, 6, 7 ] 
+
         # Generator Params 
         G.architecture = 'orig'
         
@@ -89,6 +93,9 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
         G_loss  = EasyDict(func_name='training.loss.G_logistic_ns_pathreg')
         D_loss  = EasyDict(func_name='training.loss.D_logistic')
 
+        dataset_args = EasyDict(tfrecord_dir=dataset)
+        dataset_args.base_size = [ 5, 6, 7 ] 
+
         # Generator Params 
         G.architecture = 'orig'
         
@@ -127,6 +134,9 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
         # sched.minibatch_size_dict = {8: 32, 16: 32, 32: 16, 64: 16}
     elif config_id == 'Gorig-Dorig-r1-3d-1mm-base567':
         train   = EasyDict(run_func_name='training.training_loop_3d.training_loop') # Options for training loop.
+
+        dataset_args = EasyDict(tfrecord_dir=dataset)
+        dataset_args.base_size = [ 5, 6, 7 ] 
 
         G       = EasyDict(func_name='training.networks3d_stylegan2.G_main')
         D       = EasyDict(func_name='training.networks3d_stylegan2.D_stylegan2_3d_curated_real')
@@ -173,6 +183,9 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
     elif config_id == 'Gorig-Dres-3d-2mm-base567':
         train   = EasyDict(run_func_name='training.training_loop_3d.training_loop') # Options for training loop.
 
+        dataset_args = EasyDict(tfrecord_dir=dataset)
+        dataset_args.base_size = [ 5, 6, 7 ] 
+
         G       = EasyDict(func_name='training.networks3d_stylegan2.G_main')
         D       = EasyDict(func_name='training.networks3d_stylegan2.D_stylegan2_3d_curated_real')
 
@@ -217,6 +230,9 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
     elif config_id == 'Gorig-Dres-3d-2mm-base567':
         train   = EasyDict(run_func_name='training.training_loop_3d.training_loop') # Options for training loop.
 
+        dataset_args = EasyDict(tfrecord_dir=dataset)
+        dataset_args.base_size = [ 5, 6, 7 ] 
+
         G       = EasyDict(func_name='training.networks3d_stylegan2.G_main')
         D       = EasyDict(func_name='training.networks3d_stylegan2.D_stylegan2_3d_curated_real')
 
@@ -259,6 +275,9 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
         sched.minibatch_size_dict = {8: sched.minibatch_gpu_dict[ 8 ] * num_gpus , 16:  sched.minibatch_gpu_dict[ 16 ] * num_gpus, 32:  sched.minibatch_gpu_dict[ 32 ] * num_gpus, 64:  sched.minibatch_gpu_dict[ 64 ] * num_gpus}
     elif config_id == 'Gorig-Dres-R1-3d-2mm-base567':
         train   = EasyDict(run_func_name='training.training_loop_3d.training_loop') # Options for training loop.
+
+        dataset_args = EasyDict(tfrecord_dir=dataset)
+        dataset_args.base_size = [ 5, 6, 7 ] 
 
         G       = EasyDict(func_name='training.networks3d_stylegan2.G_main')
         D       = EasyDict(func_name='training.networks3d_stylegan2.D_stylegan2_3d_curated_real')
@@ -305,6 +324,9 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
     elif config_id == 'Gorig-Dres-R2-3d-2mm-base567':
         train   = EasyDict(run_func_name='training.training_loop_3d.training_loop') # Options for training loop.
 
+        dataset_args = EasyDict(tfrecord_dir=dataset)
+        dataset_args.base_size = [ 5, 6, 7 ] 
+
         G       = EasyDict(func_name='training.networks3d_stylegan2.G_main')
         D       = EasyDict(func_name='training.networks3d_stylegan2.D_stylegan2_3d_curated_real')
 
@@ -348,6 +370,9 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
         sched.minibatch_size_dict = {8: sched.minibatch_gpu_dict[ 8 ] * num_gpus , 16:  sched.minibatch_gpu_dict[ 16 ] * num_gpus, 32:  sched.minibatch_gpu_dict[ 32 ] * num_gpus, 64:  sched.minibatch_gpu_dict[ 64 ] * num_gpus}
     elif config_id == 'Gorig-Dres-DeepFil-R1-3d-2mm-base567':
         train   = EasyDict(run_func_name='training.training_loop_3d.training_loop') # Options for training loop.
+
+        dataset_args = EasyDict(tfrecord_dir=dataset)
+        dataset_args.base_size = [ 5, 6, 7 ] 
 
         G       = EasyDict(func_name='training.networks3d_stylegan2.G_main')
         D       = EasyDict(func_name='training.networks3d_stylegan2.D_stylegan2_3d_curated_real')
@@ -400,7 +425,7 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
     desc = '3dstylegan2'
 
     desc += '-' + dataset
-    dataset_args = EasyDict(tfrecord_dir=dataset)
+    # dataset_args = EasyDict(tfrecord_dir=dataset)
 
     assert num_gpus in [1, 2, 4, 8]
     sc.num_gpus = num_gpus
