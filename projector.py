@@ -6,7 +6,9 @@
 # https://nvlabs.github.io/stylegan2/license.html
 
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+
 import dnnlib
 import dnnlib.tflib as tflib
 
@@ -247,7 +249,6 @@ class Projector:
         print(target_images_small.shape)
         print(self._target_images_var_small.shape)
         
-
         # Initialize optimization state.
         self._info('Initializing optimization state...')
         tflib.set_vars({self._target_images_var: target_images, self._target_images_var_small : target_images_small, self._dlatents_var: np.tile(self._dlatent_avg, [self._minibatch_size, 1, 1])})
