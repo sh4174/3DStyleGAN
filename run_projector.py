@@ -1,3 +1,8 @@
+# ------------------------------------------------------------------
+# Projectors for 3D StyleGAN and Latent Space Statistics/Embedding
+# ------------------------------------------------------------------
+# Original StyleGAN2 Copyright and Licences
+# ------------------------------------------------------------------
 # Copyright (c) 2019, NVIDIA Corporation. All rights reserved.
 #
 # This work is made available under the Nvidia Source Code License-NC.
@@ -31,8 +36,10 @@ def project_image(proj, targets, png_prefix, num_snapshots):
             misc.save_3d_image_grid(proj.get_images(), png_prefix + 'step%04d.png' % proj.get_cur_step(), drange=[-1,1])
             misc.save_3d_image_grid_y(proj.get_images(), png_prefix + 'step%04d_y.png' % proj.get_cur_step(), drange=[-1,1])
             misc.save_3d_image_grid_z(proj.get_images(), png_prefix + 'step%04d_z.png' % proj.get_cur_step(), drange=[-1,1])
+    
     print('\r%-30s\r' % '', end='', flush=True)
 
+    return proj.get_dlatents(), proj.get_noises()
 #----------------------------------------------------------------------------
 
 def project_generated_images(network_pkl, seeds, num_snapshots, truncation_psi):
@@ -72,6 +79,49 @@ def project_real_images(network_pkl, dataset_name, data_dir, num_images, num_sna
         images, _labels = dataset_obj.get_minibatch_np(1)
         images = misc.adjust_dynamic_range(images, [0, 1.0], [-1, 1])
         project_image(proj, targets=images, png_prefix=dnnlib.make_run_dir_path('image%04d-' % image_idx), num_snapshots=num_snapshots)
+
+
+def project_real_images_average(network_pkl, dataset_name, data_dir, num_images, num_snapshots):
+    print('Loading networks from "%s"...' % network_pkl)
+    _G, _D, Gs = pretrained_networks.load_networks(network_pkl)
+    proj = projector.Projector()
+    proj.set_network(Gs)
+
+    print('Loading images from "%s"...' % dataset_name)
+    dataset_obj = dataset.load_3d_dataset(data_dir=data_dir, tfrecord_dir=dataset_name, max_label_size=0, repeat=False, shuffle_mb=0)
+    assert dataset_obj.shape == Gs.output_shape[1:]
+
+    list_dlatents = []
+    list_noises = []
+
+    for image_idx in range(num_images):
+        print('Projecting image %d/%d ...' % (image_idx, num_images))
+        images, _labels = dataset_obj.get_minibatch_np(1)
+        images = misc.adjust_dynamic_range(images, [0, 1.0], [-1, 1])
+        dlatent, noise = project_image(proj, targets=images, png_prefix=dnnlib.make_run_dir_path('image%04d-' % image_idx), num_snapshots=num_snapshots)
+
+        list_dlatents.append( dlatent )
+        list_noises.append( noise )
+
+    dlatents = np.zeros( ( len( list_dlatents ), list_dlatents[ 0 ].shape[ 1 ], list_dlatents[ 0 ].shape[ 2 ] )  )
+    # noises = np.zeros( ( len( list_noises ), list_noises[ 0 ].shape[ 0 ], list_noises[ 0 ].shape[ 1 ], list_noises[ 0 ].shape[ 2 ] ) )
+
+    print( "==============================================" )
+    print( "dlatents" )
+    print( dlatents.shape )
+    # print( "noises" )
+    # print( noises.shape )
+    print( "dlatent" )
+    print( list_dlatents[ 0 ].shape )
+    print( "noise" )
+    print( len( list_noises ) )
+    print( len( list_noises[ 0 ] ) )
+    print( list_noises[ 0 ][ 0 ].shape ) 
+    print( list_noises[ 0 ][ 1 ].shape ) 
+    print( "==============================================")
+
+
+
 
 #----------------------------------------------------------------------------
 
@@ -125,6 +175,14 @@ Run 'python %(prog)s <subcommand> --help' for subcommand help.''',
     project_real_images_parser.add_argument('--num-images', type=int, help='Number of images to project (default: %(default)s)', default=7)
     project_real_images_parser.add_argument('--result-dir', help='Root directory for run results (default: %(default)s)', default='results', metavar='DIR')
 
+    project_real_images_average_parser = subparsers.add_parser('project-real-images-average', help='Project real images and averaging')
+    project_real_images_average_parser.add_argument('--network', help='Network pickle filename', dest='network_pkl', required=True)
+    project_real_images_average_parser.add_argument('--data-dir', help='Dataset root directory', required=True)
+    project_real_images_average_parser.add_argument('--dataset', help='Training dataset', dest='dataset_name', required=True)
+    project_real_images_average_parser.add_argument('--num-snapshots', type=int, help='Number of snapshots (default: %(default)s)', default=5)
+    project_real_images_average_parser.add_argument('--num-images', type=int, help='Number of images to project (default: %(default)s)', default=2)
+    project_real_images_average_parser.add_argument('--result-dir', help='Root directory for run results (default: %(default)s)', default='results', metavar='DIR')
+
     args = parser.parse_args()
     subcmd = args.command
     if subcmd is None:
@@ -141,7 +199,8 @@ Run 'python %(prog)s <subcommand> --help' for subcommand help.''',
 
     func_name_map = {
         'project-generated-images': 'run_projector.project_generated_images',
-        'project-real-images': 'run_projector.project_real_images'
+        'project-real-images': 'run_projector.project_real_images',
+        'project-real-images-average': 'run_projector.project_real_images_average'
     }
     dnnlib.submit_run(sc, func_name_map[subcmd], **kwargs)
 
