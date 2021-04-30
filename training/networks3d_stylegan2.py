@@ -323,7 +323,7 @@ def G_synthesis_stylegan2_3d_curated_real(
     fmap_decay          = 1.0,          # log2 feature map reduction when doubling the resolution.
     fmap_min            = 30,            # Minimum number of feature maps in any layer.
     fmap_max            = 30,          # Maximum number of feature maps in any layer.
-    randomize_noise     = False,         # True = randomize noise inputs every time (non-deterministic), False = read noise inputs from variables.
+    randomize_noise     = True,         # True = randomize noise inputs every time (non-deterministic), False = read noise inputs from variables.
     architecture        = 'skip',       # Architecture: 'orig', 'skip', 'resnet'.
     nonlinearity        = 'lrelu',      # Activation function: 'relu', 'lrelu', etc.
     dtype               = dtypeGlob,    # Data type to use for activations and outputs.
@@ -365,6 +365,7 @@ def G_synthesis_stylegan2_3d_curated_real(
         res = (layer_idx + 5) // 2
         shape = [1, 1, base_size[ 0 ] * 2**( res - 2), base_size[ 1 ] * 2**( res - 2 ), base_size[ 2 ] * 2**( res - 2 ) ]
         noise_inputs.append(tf.get_variable('noise%d' % layer_idx, shape=shape, initializer=tf.initializers.random_normal(), trainable=False))
+        # noise_inputs.append(tf.get_variable('noise%d' % layer_idx, shape=shape, initializer=tf.initializers.zeros(), trainable=False))
 
     # Single convolution layer with all the bells and whistles.
     def layer(x, layer_idx, fmaps, kernel, up=False):
@@ -374,6 +375,7 @@ def G_synthesis_stylegan2_3d_curated_real(
             noise = tf.random_normal([tf.shape(x)[0], 1, x.shape[2], x.shape[3], x.shape[4]], dtype=x.dtype)
         else:
             noise = tf.cast(noise_inputs[layer_idx], x.dtype)
+
         noise_strength = tf.get_variable('noise_strength', shape=[], initializer=tf.initializers.zeros())
         x += noise * tf.cast(noise_strength, x.dtype)
 
@@ -459,7 +461,6 @@ def D_stylegan2_3d_curated_real(
     resample_kernel     = [1,3,3,3,1],    # Low-pass filter to apply when resampling activations. None = no filtering.
     base_size = [ 4, 4, 4 ], # Base Layer Size
     **_kwargs):                         # Ignore unrecognized keyword args.
-
 
     print( "=================================" )
     print( "Discriminator" )

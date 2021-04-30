@@ -70,6 +70,7 @@ class TFRecordDataset:
                 tfr_shapes.append(self.parse_tfrecord_np(record).shape)
                 break
 
+
         # Autodetect label filename.
         if self.label_file is None:
             guess = sorted(glob.glob(os.path.join(self.tfrecord_dir, '*.labels')))
@@ -119,17 +120,35 @@ class TFRecordDataset:
             self.shape = [max_shape[0], int( self.resolution / 4 * 6 ), self.resolution, int( self.resolution / 4 * 6 ) ]
             tfr_lods = [self.resolution_log2 - int(np.log2(shape[1] / 6 * 4)) for shape in tfr_shapes]
         else:
-            assert all(shape[0] == max_shape[0] for shape in tfr_shapes)
-            assert all(shape[1] == shape[2] for shape in tfr_shapes)
-            assert all(shape[1] == self.resolution // (2**lod) for shape, lod in zip(tfr_shapes, tfr_lods))
-            assert all(lod in tfr_lods for lod in range(self.resolution_log2 - 1))
+            # assert all(shape[0] == max_shape[0] for shape in tfr_shapes)
+            # assert all(shape[1] == shape[2] for shape in tfr_shapes)
+            # assert all(shape[1] == self.resolution // (2**lod) for shape, lod in zip(tfr_shapes, tfr_lods))
+            # assert all(lod in tfr_lods for lod in range(self.resolution_log2 - 1))
 
             # Determine shape and resolution.
             max_shape = max(tfr_shapes, key=np.prod)
-            self.resolution = resolution if resolution is not None else max_shape[1]
+            print( "================================" )
+            print( "max_shape" )
+            print( max_shape )
+            print( "base_size" )
+            print( base_size )
+            print( "================================" )
+
+            self.resolution = resolution if resolution is not None else int( max_shape[1] / self.base_size[ 0 ] * 4 ) 
+            print( "================================" )
+            print( "self.resolution" )
+            print( self.resolution )
+            print( "resolution" )
+            print( resolution )
+            print( "================================" )
+            
             self.resolution_log2 = int(np.log2(self.resolution))
-            self.shape = [max_shape[0], self.resolution, self.resolution, self.resolution]
-            tfr_lods = [self.resolution_log2 - int(np.log2(shape[1])) for shape in tfr_shapes]
+            self.shape = [max_shape[0], int( self.resolution / 4 * self.base_size[ 0 ] ), int( self.resolution / 4 * self.base_size[ 1 ] ), int( self.resolution / 4 * self.base_size[ 2 ] ) ]
+
+            for shape in tfr_shapes:
+                print( shape )
+
+            tfr_lods = [self.resolution_log2 - int(np.log2(shape[1] / self.base_size[ 0 ] * 4 )) for shape in tfr_shapes]
 
         # Load labels.
         assert max_label_size == 'full' or max_label_size >= 0

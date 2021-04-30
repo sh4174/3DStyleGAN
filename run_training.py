@@ -237,7 +237,7 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
         D       = EasyDict(func_name='training.networks3d_stylegan2.D_stylegan2_3d_curated_real')
 
         G_loss  = EasyDict(func_name='training.loss.G_logistic_ns_pathreg')
-        D_loss  = EasyDict(func_name='training.loss.D_logistic_r1')
+        D_loss  = EasyDict(func_name='training.loss.D_logistic')
 
         # Generator Params 
         G.architecture = 'orig'
@@ -289,23 +289,22 @@ def run(dataset, data_dir, result_dir, config_id, num_gpus, total_kimg, gamma, m
         G.architecture = 'orig'
         
         # Mapping Network Params
-        G.latent_size = 96
-        G.dlatent_size = 96
-        G.mapping_fmaps = 96
+        G.latent_size = 128
+        G.dlatent_size = 128
+        G.mapping_fmaps = 128
 
         # Synthesis Network Params
         # G.resolution = 128
-        G.fmap_min = 32
-        G.fmap_max = 32
+        G.fmap_min = 96
+        G.fmap_max = 96
         G.base_size = [ 5, 6, 7 ]
 
         # Discriminator Params 
         D.architecture = 'resnet'        
         # D.resolution=128
-        D.fmap_min = 32
-        D.fmap_max = 32
+        D.fmap_min = 96
+        D.fmap_max = 96
         D.base_size = [ 5, 6, 7 ]
-        
 
         train.data_dir = data_dir
         train.total_kimg = total_kimg
