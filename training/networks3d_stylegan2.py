@@ -324,6 +324,7 @@ def G_synthesis_stylegan2_3d_curated_real(
     fmap_min            = 30,            # Minimum number of feature maps in any layer.
     fmap_max            = 30,          # Maximum number of feature maps in any layer.
     randomize_noise     = True,         # True = randomize noise inputs every time (non-deterministic), False = read noise inputs from variables.
+    no_noise            = False,         # True = Adding no noise vector, False = add noise (randomized/non-randomized based on randomize_noise).
     architecture        = 'skip',       # Architecture: 'orig', 'skip', 'resnet'.
     nonlinearity        = 'lrelu',      # Activation function: 'relu', 'lrelu', etc.
     dtype               = dtypeGlob,    # Data type to use for activations and outputs.
@@ -364,20 +365,24 @@ def G_synthesis_stylegan2_3d_curated_real(
     for layer_idx in range(num_layers - 1):
         res = (layer_idx + 5) // 2
         shape = [1, 1, base_size[ 0 ] * 2**( res - 2), base_size[ 1 ] * 2**( res - 2 ), base_size[ 2 ] * 2**( res - 2 ) ]
-        noise_inputs.append(tf.get_variable('noise%d' % layer_idx, shape=shape, initializer=tf.initializers.random_normal(), trainable=False))
-        # noise_inputs.append(tf.get_variable('noise%d' % layer_idx, shape=shape, initializer=tf.initializers.zeros(), trainable=False))
+
+        if no_noise:
+            noise_inputs.append(tf.get_variable('noise%d' % layer_idx, shape=shape, initializer=tf.initializers.zeros(), trainable=False))
+        else:
+            noise_inputs.append(tf.get_variable('noise%d' % layer_idx, shape=shape, initializer=tf.initializers.random_normal(), trainable=False))
 
     # Single convolution layer with all the bells and whistles.
     def layer(x, layer_idx, fmaps, kernel, up=False):
         x = modulated_conv3d_layer(x, dlatents_in[:, layer_idx], fmaps=fmaps, kernel=kernel, up=up, resample_kernel=resample_kernel, fused_modconv=fused_modconv)
 
-        if randomize_noise:
-            noise = tf.random_normal([tf.shape(x)[0], 1, x.shape[2], x.shape[3], x.shape[4]], dtype=x.dtype)
-        else:
-            noise = tf.cast(noise_inputs[layer_idx], x.dtype)
+        if not no_noise:
+            if randomize_noise:
+                noise = tf.random_normal([tf.shape(x)[0], 1, x.shape[2], x.shape[3], x.shape[4]], dtype=x.dtype)
+            else:
+                noise = tf.cast(noise_inputs[layer_idx], x.dtype)
 
-        noise_strength = tf.get_variable('noise_strength', shape=[], initializer=tf.initializers.zeros())
-        x += noise * tf.cast(noise_strength, x.dtype)
+            noise_strength = tf.get_variable('noise_strength', shape=[], initializer=tf.initializers.zeros())
+            x += noise * tf.cast(noise_strength, x.dtype)
 
         ap_x = apply_bias_act(x, act=act)
 
@@ -740,6 +745,9 @@ def D_stylegan2_3d(
     assert scores_out.dtype == tf.as_dtype(dtype)
     scores_out = tf.identity(scores_out, name='scores_out')
     return scores_out
+
+# ----------------------------------------------------------------------------
+# Not In Use - Old Codes
 
 #----------------------------------------------------------------------------
 # G_synthesis and D for 192x128x192 synthetic images

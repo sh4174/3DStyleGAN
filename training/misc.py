@@ -81,27 +81,28 @@ def apply_mirror_augment(minibatch):
 
 #----------------------------------------------------------------------------
 # 3D Image utils.
-
 def create_3d_image_grid(images, grid_size=None):
     assert images.ndim == 4 or images.ndim == 5
     # NCDHW
     num, img_w, img_h, img_d = images.shape[0], images.shape[-1], images.shape[-2], images.shape[-3]
 
+    print( "===========================================================" )
+    print( "")
     if grid_size is not None:
-        grid_w, grid_h = tuple(grid_size)
+        grid_h, grid_d = tuple(grid_size)
     else:
-        grid_w = max(int(np.ceil(np.sqrt(num))), 1)
-        grid_h = max((num - 1) // grid_w + 1, 1)
+        grid_h = max(int(np.ceil(np.sqrt(num))), 1)
+        grid_d = max((num - 1) // grid_h + 1, 1)
 
-    grid = np.zeros(list(images.shape[1:-2]) + [grid_h * img_h, grid_w * img_w], dtype=images.dtype)
-    
+    grid = np.zeros(list(images.shape[1:-2]) + [grid_d * img_d, grid_h * img_h], dtype=images.dtype)
+
     for idx in range(num):
-        x = (idx % grid_w) * img_w
-        y = (idx // grid_w) * img_h
+        x = (idx % grid_h) * img_h
+        y = (idx // grid_h) * img_d
         if images.ndim == 4:
-            grid[..., y : y + img_h, x : x + img_w] = images[idx][ int( img_d//2 ), :, : ]
+            grid[..., y : y + img_d, x : x + img_h] = images[idx][ :, :, int(img_w//2) ]
         else:
-            grid[..., y : y + img_h, x : x + img_w] = images[idx][ 0,  int( img_d//2), :, : ]
+            grid[..., y : y + img_d, x : x + img_h] = images[idx][ 0, :, :, int(img_w//2) ]
 
     return grid
 
