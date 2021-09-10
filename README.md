@@ -4,6 +4,10 @@
 
 Please see the official repo (https://github.com/NVlabs/stylegan2) of StyleGAN2 from NVIDIA for the original code and its license. 
 
+## Note
+
+We plan to clean and update the code repository on October when we present this work at the DGM4MICCAI workshop at MICCAI 2021.
+
 ## Requirements 
 The requirements of the original code + 
 (TF 1.14 --> TF 2.4.0), Python 3.8, nibabel
