@@ -2,3 +2,7 @@ __pycache__
 sbatch/*
 ._*
 .DS_Store
+results/
+_cudacache
+.vscode/
+*.npy
